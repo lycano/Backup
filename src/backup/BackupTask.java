@@ -82,15 +82,16 @@ public class BackupTask implements Runnable, PropertyConstants {
      * 
      */
     protected void backup() {
-
         // the messages
         String startBackupMessage = pSystem.getStringProperty(STRING_START_BACKUP_MESSAGE);
         System.out.println(startBackupMessage);
         server.broadcastMessage(startBackupMessage);
+
         // a hack like methode to send the console command for disabling every world save
         ConsoleCommandSender ccs = new ConsoleCommandSender(server);
         server.dispatchCommand(ccs, "save-all");
         server.dispatchCommand(ccs, "save-off");
+
         // the Player Position are getting stored
         server.savePlayers();
 
@@ -102,21 +103,26 @@ public class BackupTask implements Runnable, PropertyConstants {
         try {
             // iterate through every world and zip every one
             boolean hasToZIP = pSystem.getBooleanProperty(BOOL_ZIP);
-            if (hasToZIP)
+            if (!hasToZIP)
                 System.out.println("[BACKUP] Zipping backup is disabled!");
-            outter :
+
+            outter:
             for (World world : server.getWorlds()) {
-                inner :
+                inner:
                 for(String worldName : worldNames)
                     if (worldName.equalsIgnoreCase(world.getName()))
                         continue outter;
+
                 String backupDir = "backups".concat(FILE_SEPARATOR).concat(world.getName());
                 if (!hasToZIP)
                     backupDir = backupDir.concat(this.getDate());
+
                 // save every information from the RAM into the HDD
                 world.save();
+
                 // make a temporary dir of the world
                 FileUtils.copyDirectory(new File(world.getName()), new File(backupDir));
+
                 // zip the temporary dir
                 String targetName = world.getName();
                 String targetDir = "backups".concat(FILE_SEPARATOR);
@@ -125,24 +131,30 @@ public class BackupTask implements Runnable, PropertyConstants {
                     targetName = backupName;
                     targetDir = targetDir.concat("custom").concat(FILE_SEPARATOR);
                 }
+
                 if (hasToZIP) {
                     FileUtils.zipDirectory(backupDir, targetDir.concat(targetName).concat(getDate()));
+
                     // delete the temporary dir
-                     FileUtils.deleteDirectory(new File(backupDir));
+                    FileUtils.deleteDirectory(new File(backupDir));
                 }
             }
         }
         catch (Exception e) {
             e.printStackTrace(System.out);
         }
+
         // enable the world save
         server.dispatchCommand(ccs, "save-on");
+
         // the messages
         String completedBackupMessage = pSystem.getStringProperty(STRING_FINISH_BACKUP_MESSAGE);
         server.broadcastMessage(completedBackupMessage);
         System.out.println(completedBackupMessage);
+
         // check whether there are old backups to delete
         deleteOldBackups();
+
         backupName = null;
         isManuelBackup = false;
     }
